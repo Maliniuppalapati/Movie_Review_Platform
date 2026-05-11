@@ -9,7 +9,11 @@ const movieSchema = new mongoose.Schema(
     cast: [{ type: String }],
     synopsis: { type: String, default: "" },
     posterUrl: { type: String, default: "" },
-    averageRating: { type: Number, default: 0 }
+    averageRating: { type: Number, default: 0 },
+    aiSummary: {
+      text: { type: String, default: "" },
+      updatedAt: { type: Date }
+    }
   },
   { timestamps: true }
 );

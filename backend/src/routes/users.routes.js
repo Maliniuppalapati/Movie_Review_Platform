@@ -8,14 +8,15 @@ import {
   addToWatchlist,
   removeFromWatchlist
 } from "../controllers/users.controller.js";
+import { validateObjectId } from "../middleware/validateObjectId.js";
 
 const router = Router();
 
-router.get("/:id", requireAuth, asyncHandler(getUser));
-router.put("/:id", requireAuth, asyncHandler(updateUser));
+router.get("/:id", validateObjectId, requireAuth, asyncHandler(getUser));
+router.put("/:id", validateObjectId, requireAuth, asyncHandler(updateUser));
 
-router.get("/:id/watchlist", requireAuth, asyncHandler(getWatchlist));
-router.post("/:id/watchlist", requireAuth, asyncHandler(addToWatchlist));
-router.delete("/:id/watchlist/:movieId", requireAuth, asyncHandler(removeFromWatchlist));
+router.get("/:id/watchlist", validateObjectId, requireAuth, asyncHandler(getWatchlist));
+router.post("/:id/watchlist", validateObjectId, requireAuth, asyncHandler(addToWatchlist));
+router.delete("/:id/watchlist/:movieId", validateObjectId, requireAuth, asyncHandler(removeFromWatchlist));
 
 export default router;

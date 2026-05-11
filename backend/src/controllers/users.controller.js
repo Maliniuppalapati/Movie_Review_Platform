@@ -9,7 +9,7 @@ const updateSchema = z.object({
 });
 
 function ensureSelf(req, userId) {
-  if (req.user._id.toString() !== userId && !req.user.isAdmin) {
+  if (req.user._id.toString() !== userId && req.user.role !== "admin") {
     const err = new Error("Forbidden");
     err.status = 403;
     throw err;

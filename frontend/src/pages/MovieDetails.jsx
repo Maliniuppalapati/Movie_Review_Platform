@@ -16,8 +16,13 @@ export default function MovieDetails() {
   const [reviewText, setReviewText] = useState("");
 
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
+
+  const [aiSummary, setAiSummary] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [sortBy, setSortBy] = useState("latest");
 
   const load = async () => {
     setLoading(true);
@@ -74,6 +79,7 @@ export default function MovieDetails() {
   const submitReview = async () => {
     setErr("");
     setMsg("");
+    setSubmitting(true);
     try {
       const res = await api(`/movies/${id}/reviews`, {
         method: "POST",
@@ -87,8 +93,54 @@ export default function MovieDetails() {
       setMsg("Review submitted");
     } catch (e) {
       setErr(e.message);
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  const generateAiConsensus = async () => {
+    setAiLoading(true);
+    try {
+      const res = await api(`/movies/${id}/ai-consensus`);
+      setAiSummary(res.consensus);
+    } catch (e) {
+      setAiSummary("AI summary unavailable. Try again later.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const toggleHelpful = async (reviewId) => {
+    if (!user) return;
+    
+    // Optimistic update
+    setReviews(prev => prev.map(r => {
+      if (r._id === reviewId) {
+        const hasVoted = r.helpfulVotes?.includes(user.id);
+        const newVotes = hasVoted 
+          ? r.helpfulVotes.filter(v => v !== user.id)
+          : [...(r.helpfulVotes || []), user.id];
+        return { ...r, helpfulVotes: newVotes };
+      }
+      return r;
+    }));
+
+    try {
+      await api(`/movies/reviews/${reviewId}/helpful`, {
+        method: "POST",
+        token
+      });
+    } catch (e) {
+      console.error(e);
+      // Revert on error could be implemented here
+    }
+  };
+
+  const sortedReviews = [...reviews].sort((a, b) => {
+    if (sortBy === "helpful") return (b.helpfulVotes?.length || 0) - (a.helpfulVotes?.length || 0);
+    if (sortBy === "oldest") return new Date(a.createdAt) - new Date(b.createdAt);
+    return new Date(b.createdAt) - new Date(a.createdAt); // latest
+  });
 
   if (loading)
     return (
@@ -119,7 +171,7 @@ export default function MovieDetails() {
         <div className="row" style={{ marginTop: 8 }}>
           <span className="badge">{movie.genre}</span>
           <span className="badge">{movie.releaseYear}</span>
-          <span className="badge">⭐ {movie.averageRating || 0}</span>
+          <span className="badge">⭐ {movie.averageRating || 0} ({reviews.length} reviews)</span>
 
           {user && (
             <button className="secondary" onClick={toggleWatchlist}>
@@ -144,8 +196,27 @@ export default function MovieDetails() {
 
       <div style={{ height: 16 }} />
 
+      <div className="card" style={{ background: "rgba(100, 150, 255, 0.1)", border: "1px solid rgba(100, 150, 255, 0.3)" }}>
+        <h3 style={{ marginTop: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>✨ AI Insights</span>
+          <button className="secondary" onClick={generateAiConsensus} disabled={aiLoading}>
+            {aiLoading ? "Generating..." : "Generate AI Consensus"}
+          </button>
+        </h3>
+        {aiSummary && <p><strong>Consensus:</strong> {aiSummary}</p>}
+      </div>
+
+      <div style={{ height: 16 }} />
+
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Reviews</h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3 style={{ marginTop: 0 }}>Reviews</h3>
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ padding: "4px 8px" }}>
+            <option value="latest">Latest First</option>
+            <option value="helpful">Most Helpful</option>
+            <option value="oldest">Oldest First</option>
+          </select>
+        </div>
 
         {!user ? (
           <p>
@@ -166,13 +237,14 @@ export default function MovieDetails() {
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
                   placeholder="Write your review..."
+                  disabled={submitting}
                 />
               </div>
             </div>
 
             <div className="row" style={{ marginTop: 14 }}>
-              <button onClick={submitReview} disabled={!reviewText.trim()}>
-                Submit Review
+              <button onClick={submitReview} disabled={submitting}>
+                {submitting ? "Submitting..." : "Submit Review"}
               </button>
               {err && <span className="badge">{err}</span>}
             </div>
@@ -181,11 +253,11 @@ export default function MovieDetails() {
           </>
         )}
 
-        {reviews.length === 0 ? (
-          <p>No reviews yet</p>
+        {sortedReviews.length === 0 ? (
+          <p>No reviews yet.</p>
         ) : (
           <div className="row" style={{ flexDirection: "column" }}>
-            {reviews.map((r) => (
+            {sortedReviews.map((r) => (
               <div className="card" key={r._id}>
                 <div className="row" style={{ alignItems: "center", gap: 14 }}>
                   {r.userId?.profilePicture ? (
@@ -227,9 +299,19 @@ export default function MovieDetails() {
                   </div>
                 </div>
 
-                <p style={{ marginTop: 10, marginBottom: 0 }}>
-                  {r.reviewText || "-"}
+                <p style={{ marginTop: 10, marginBottom: 10 }}>
+                  {r.reviewText || <i className="muted">No text provided</i>}
                 </p>
+
+                <div className="row">
+                  <button 
+                    className="secondary" 
+                    style={{ padding: "4px 8px", fontSize: "12px" }}
+                    onClick={() => toggleHelpful(r._id)}
+                  >
+                    👍 Helpful ({r.helpfulVotes?.length || 0})
+                  </button>
+                </div>
               </div>
             ))}
           </div>

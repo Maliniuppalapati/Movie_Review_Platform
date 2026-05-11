@@ -24,7 +24,7 @@ export async function requireAuth(req, res, next) {
 }
 
 export function requireAdmin(req, res, next) {
-  if (!req.user?.isAdmin) {
+  if (req.user?.role !== "admin") {
     res.status(403);
     return next(new Error("Admin only"));
   }

@@ -80,10 +80,11 @@ export async function addReview(req, res) {
     });
 
   } catch (e) {
-
-    res.status(409);
-    throw new Error("You already reviewed this movie");
-
+    if (e.code === 11000) {
+      res.status(409);
+      throw new Error("You already reviewed this movie");
+    }
+    throw e;
   }
 
 
@@ -97,5 +98,34 @@ export async function addReview(req, res) {
   res.status(201).json({
     review: populatedReview,
     averageRating
+  });
+}
+
+export async function toggleHelpfulVote(req, res) {
+  const reviewId = req.params.reviewId;
+  const userId = req.user._id;
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    res.status(404);
+    throw new Error("Review not found");
+  }
+
+  const index = review.helpfulVotes.indexOf(userId);
+  let status;
+
+  if (index === -1) {
+    review.helpfulVotes.push(userId);
+    status = "added";
+  } else {
+    review.helpfulVotes.splice(index, 1);
+    status = "removed";
+  }
+
+  await review.save();
+
+  res.json({
+    helpfulCount: review.helpfulVotes.length,
+    status
   });
 }

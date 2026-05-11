@@ -46,6 +46,7 @@ export async function register(req, res) {
       id: user._id,
       username: user.username,
       email: user.email,
+      role: user.role,
       profilePicture: user.profilePicture || ""
     }
   });
@@ -79,6 +80,24 @@ export async function login(req, res) {
       id: user._id,
       username: user.username,
       email: user.email,
+      role: user.role,
+      profilePicture: user.profilePicture || ""
+    }
+  });
+}
+
+export async function getCurrentUser(req, res) {
+  const user = await User.findById(req.user._id).select("-passwordHash");
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+  res.json({
+    user: {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
       profilePicture: user.profilePicture || ""
     }
   });
