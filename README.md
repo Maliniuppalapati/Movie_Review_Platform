@@ -104,4 +104,3 @@ By default, new users are assigned the `user` role. To test the Admin Dashboard:
 
 ---
 
-*This project was built to demonstrate full-stack proficiency, API design, and modern Web architecture.*
