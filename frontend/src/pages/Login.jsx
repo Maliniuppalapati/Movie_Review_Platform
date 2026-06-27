@@ -4,7 +4,6 @@ import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Login() {
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
@@ -14,60 +13,58 @@ export default function Login() {
   const { login } = useAuth();
 
   const submit = async (e) => {
-
     e.preventDefault();
 
     setErr("");
     setLoading(true);
 
     try {
-
       const data = await api("/auth/login", {
         method: "POST",
-        body: { email, password }
+        body: {
+          email,
+          password,
+        },
       });
 
+      // Save user and token
       login(data);
 
-      nav("/movies", { replace: true });
-
+      // Redirect based on role
+      if (data.user?.role === "admin") {
+        nav("/admin", { replace: true });
+      } else {
+        nav("/movies", { replace: true });
+      }
     } catch (e2) {
-
       setErr(e2.message || "Login failed");
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
   return (
-
     <div className="container page-center">
-
       <div className="card login-card">
-
         <h2>Login</h2>
 
         <form onSubmit={submit}>
-
           <label>Email</label>
-
           <input
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            required
           />
 
           <div style={{ height: 12 }} />
 
           <label>Password</label>
-
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
           />
 
           <div style={{ height: 16 }} />
@@ -75,23 +72,16 @@ export default function Login() {
           <button type="submit" disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </button>
-
         </form>
 
         {err && <p className="badge">{err}</p>}
 
         <div style={{ marginTop: 14 }}>
-
           <small>
-            Don’t have account? <Link to="/register">Register</Link>
+            Don't have an account? <Link to="/register">Register</Link>
           </small>
-
         </div>
-
       </div>
-
     </div>
-
   );
-
 }
